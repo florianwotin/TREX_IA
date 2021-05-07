@@ -1,19 +1,20 @@
 # TREX_IA
 ## Introduction
-This part will describe the implementation of deep learning techniques to control the robot through the pathway thanks to the pictures taken by the webcam.
+This part will describe the implementation a deep learning techniques and image classification to control the robot through the pathway thanks to the pictures taken by the webcam.
 
 The different objectives are:
-- Import the pictures from the storage disk
-- Load pictures paths and labels
+- Import the files from the storage disk
+- Import pictures paths and labels
 - Balance data
-- Prepare arrays
+- Load pictures and labels
 - Augment and process pictures
 - Create and train the model
+- Print the results and save the model
 
 ## Find the notebook
 The neural network is designed and trained on [Google Colab](https://colab.research.google.com) This platform provides solutions to create Python notebooks and get much more GPU power to train faster the models.
 
-The TREX notebook can be found at this [address](https://colab.research.google.com/drive/1Inww_IHnbZclx8BwDfj4aP4N3cu4Dl9k?usp=sharing) You can also choose to create a new notebook with File > New Notebook.
+The TREX notebook can be found [here](https://colab.research.google.com/drive/1Inww_IHnbZclx8BwDfj4aP4N3cu4Dl9k?usp=sharing). You can also choose to create a new notebook with File > New Notebook.
 
 The notebook is divided into several code blocks which can be executed independently. At the first run, Colab will connect you to a new session. You can modify the execution type on Execution > Modify execution type to choose GPU or CPU.
 
@@ -110,3 +111,92 @@ print(img.shape)
 cv2_imshow(img)
 ```
 The picture size can vary from the webcam used in the project.
+
+## Pictures augmenting and process
+What characterize a good model is what type of data is implemented in it for training. In addition to good labelling, the polyvalence of the pictures will help the model to predict a better direction of steering for the robot. For example, an image taken from the webcam be blurred, flipped or zoomed representing every situation in the real life (weather or luminosity changing, slopes...). Training a model with only one type of pictures taken in the same conditions can affect the prediction accuracy.
+
+The first step is to augment each image of the dataset. Each image will be randomly (with a probability of 50%) rotated, scaled, brightened or flipped:
+```python
+def augmentImage(imgPath,steering):
+	# Function to modify an image and its steering. Dependinga random value, an
+	# image can be modified many times
+
+	# Read image from path and convert it as a numpy array
+	img =  mpimg.imread(imgPath)
+
+	# Rotation of image
+	if np.random.rand() < 0.5:
+		pan = iaa.Affine(translate_percent={"x": (-0.1, 0.1), "y": (-0.1, 0.1)})
+		img = pan.augment_image(img)
+
+	# Scaling image
+	if np.random.rand() < 0.5:
+		zoom = iaa.Affine(scale=(1, 1.2))
+		img = zoom.augment_image(img)
+
+	# Multiply all pixels of image to make darker or brighter
+	if np.random.rand() < 0.5:
+ 		brightness = iaa.Multiply((0.5, 1.2))
+ 		img = brightness.augment_image(img)
+
+	 # Flip image
+	 if np.random.rand() < 0.5:
+		 img = cv2.flip(img, 1)
+		 steering = -steering
+ 	return img, steering
+```
+Then each image will be processed to change the color coding and size:
+```python
+def preProcess(img):
+ # Change size and and color coding for an image
+ img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+ img = cv2.GaussianBlur(img,  (3, 3), 0)
+ img = cv2.resize(img, (320, 240))
+ # Change values of pixels from 0-255 to 0-1
+ img = img.astype(np.float32) / 255
+ return img
+```
+The size of the image can be changed depending the speed of image computing by the neural network.
+You can choose to augment and process each image of the dataset:
+```python
+imagesAugmentedList = []
+steeringList = []
+
+for image, steering in zip(imagesPath, steerings):
+	imageAugmented, newSteering = augmentImage(image, steering)
+	imagesAugmentedList.append(imageAugmented)
+	steeringList.append(steering)
+```
+```python
+imagesProcessedList = []
+
+for image in imagesAugmentedList:
+	imageProcessed = preProcess(image)
+	imagesProcessedList.append(imageProcessed)
+```
+You can plot as an example an image with the method plt.imshow().
+
+## Create and train the model
+The architecture chosen for the model is a Convolutional Neural Network (CNN). It has the advantage to have better results with images as it is directly inspired of the organization of animal visual cortex. A CNN is adapted for our application of image classification.
+
+The Keras API will be used to create the CNN. All the documentation can be found as this [address](https://keras.io/api/).
+
+The first step is to create a Sequential model defined as a linear stack of layers which will contain our neural network:
+```python
+model = Sequential()
+```
+The next step is to add the convolutions layers:
+```python
+model.add(Convolution2D(filters=24, kernel_size=(5, 5), strides=(2, 2), input_shape=(240, 320, 3), activation='elu'))
+model.add(Convolution2D(36, (5, 5), (2, 2), activation='elu'))
+model.add(Convolution2D(48, (5, 5), (2, 2), activation='elu'))
+model.add(Convolution2D(64, (3, 3), activation='elu'))
+model.add(Convolution2D(64, (3, 3), activation='elu'))
+```
+The number of convolution layers and the parameters depends of the level of detail to be analysed in each image.
+For each layer:
+- The filters represents the dimensionality of the output space or the convolution channels. They are used to extract features from images in the process of convolution. The first convolution layer as 24 filters and the number is increasing for each layer to get deeper details of an image.
+- The kernel size represents the convolution window. A little kernel size will increase the precision of features analysis.
+- The strides parameter (here (2,2)) determine how much the window shifts by in each of the dimensions (height and width).
+- The input shape indicated to the convolution layer the size of the input image. This parameter is only necessary for the first layer.
+- The activation function determines the value of the output. 'ELU' is a function that tend to converge cost to zero faster and produce more accurate results.
