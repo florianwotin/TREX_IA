@@ -5,7 +5,6 @@ This part will describe the implementation a deep learning techniques and image 
 The different objectives are:
 - Import the files from the storage disk
 - Import pictures paths and labels
-- Balance data
 - Load pictures and labels
 - Augment and process pictures
 - Create and train the model
@@ -44,6 +43,8 @@ To import the .zip into your workspace:
 
 ## Load pictures paths and labels
 The next step is to load the pictures from the workspace to the python code as a Panda Frame for easier processing.
+
+![Load process](load_paths.jpg)
 The .csv log file generated while taking pictures indicates for each row the path (e.g. the timestamp) for each .jpeg file and its associated label. A function is needed to return the image path from the log file:
 ```python
 def getName(filePath):
@@ -78,11 +79,11 @@ data = importDataInfo('pictures')
 print(data.head())
 ```
 
-## Balance data
-To complete
-
 ## Prepare arrays
 To train the neural network, the pictures and the labels needs to be separated into two numpy arrays.
+
+![Array process](arrays.jpg)
+
 ```python
 def loadData(path, data):
  # Creating lists of images and steering
@@ -200,3 +201,78 @@ For each layer:
 - The strides parameter (here (2,2)) determine how much the window shifts by in each of the dimensions (height and width).
 - The input shape indicated to the convolution layer the size of the input image. This parameter is only necessary for the first layer.
 - The activation function determines the value of the output. 'ELU' is a function that tend to converge cost to zero faster and produce more accurate results.
+
+The second step is to add a Flatten layer to reshape the input as a one-dimension vector:
+```python
+model.add(Flatten())
+```
+Then we can add regular densely-connected NN layers with the output:
+```python
+model.add(Dense(100, activation = 'elu'))
+model.add(Dense(50, activation = 'elu'))
+model.add(Dense(10, activation = 'elu'))
+model.add(Dense(1))
+```
+The model is compiled with a learning rate of 0.0001 and computes the mean squared error between labels and predictions:
+```python
+model.compile(Adam(lr=0.0001),loss='mse')
+```
+The model architecture can be changed to improve performances.
+
+Before training the model, the last step is to split the dataset between the training and validation set:
+![Split process](split.jpg)
+```python
+imagesProcessedArray = np.asarray(imagesProcessedList)
+steeringsArray = np.asarray(steeringList)
+
+# Split images into train and test set
+xTrain, xVal, yTrain, yVal = train_test_split(imagesProcessedArray, steeringsArray, test_size=0.2,random_state=10)
+```
+The validation set will be used to compare with the predicted results to compute the performance indicators. You can choose the proportion of the validation set with test_size or the shuffling with random_state.
+
+Finally, you can train the model with model.fit() using the training and validation sets:
+```python
+history = model.fit(xTrain, yTrain, epochs=100, validation_data=(xVal, yVal))
+```
+You can choose the number of epochs defining the number of time the model is trained with the entire training set. The results are saved in the history variable.
+
+To get a prediction from a trained model, you can use the method model.predict() with an image converted as a numpy array:
+```python
+steering = int(model.predict(img))
+```
+
+The model can also be saved to use it in the robot:
+```python
+model.save("model.h5")
+```
+
+## Alternative way to train the model
+Instead of training the model with the entire dataset, we can choose to pick randomly pictures to enhance the versatility of the model. Each image picked will be processed and augmented to fit the model:
+```python
+def dataGen(imagesPath, steeringList, batchSize, trainFlag):
+ # Data generation fitting of the model
+ while True:
+ # Creating lists of images and steerings batch
+ imgBatch = []
+ steeringBatch = []
+
+ for i in range(batchSize):
+ # Choosing an image randomly
+ index = random.randint(0, len(imagesPath) - 1)
+ # If using dataGen for training, augmenting image
+ if trainFlag:
+	img, steering = augmentImage(imagesPath[index], steeringList[index])
+ # Else just read the image get steering value
+ else:
+ 	img = mpimg.imread(imagesPath[index])
+ 	steering = steeringList[index]
+
+ # Then preprocess and append to batch
+ img = preProcess(img)
+ imgBatch.append(img)
+ steeringBatch.append(steering)
+ yield (np.asarray(imgBatch),np.asarray(steeringBatch))
+ ```
+ Then you can call the function during the fitting:
+ ```python
+ history = model.fit(dataGen(xTrain, yTrain, 100, 1), steps_per_epoch=10, epochs=10, validation_data=dataGen(xVal, yVal, 50, 0), validation_steps=50)
