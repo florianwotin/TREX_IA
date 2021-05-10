@@ -44,7 +44,6 @@ To import the .zip into your workspace:
 ## Load pictures paths and labels
 The next step is to load the pictures from the workspace to the python code as a Panda Frame for easier processing.
 
-![Load process](load_paths.jpg)
 The .csv log file generated while taking pictures indicates for each row the path (e.g. the timestamp) for each .jpeg file and its associated label. A function is needed to return the image path from the log file:
 ```python
 def getName(filePath):
@@ -81,8 +80,6 @@ print(data.head())
 
 ## Prepare arrays
 To train the neural network, the pictures and the labels needs to be separated into two numpy arrays.
-
-![Array process](arrays.jpg)
 
 ```python
 def loadData(path, data):
@@ -220,7 +217,6 @@ model.compile(Adam(lr=0.0001),loss='mse')
 The model architecture can be changed to improve performances.
 
 Before training the model, the last step is to split the dataset between the training and validation set:
-![Split process](split.jpg)
 ```python
 imagesProcessedArray = np.asarray(imagesProcessedList)
 steeringsArray = np.asarray(steeringList)
