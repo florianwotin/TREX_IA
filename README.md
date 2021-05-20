@@ -1,6 +1,6 @@
 # TREX_IA
 ## Introduction
-This part will describe the implementation a deep learning techniques and image classification to control the robot through the pathway thanks to the pictures taken by the webcam.
+This part will describe the implementation of deep learning techniques and image classification to control the robot through a pathway thanks to the pictures taken by the webcam.
 
 The different objectives are:
 - Import the files from the storage disk
@@ -11,7 +11,7 @@ The different objectives are:
 - Print the results and save the model
 
 ## Find the notebook
-The neural network is designed and trained on [Google Colab](https://colab.research.google.com) This platform provides solutions to create Python notebooks and get much more GPU power to train faster the models.
+The neural network is designed and trained on [Google Colab](https://colab.research.google.com) This platform provides solutions to create Python notebooks and we can get much more GPU power to train faster the models.
 
 The TREX notebook can be found [here](https://colab.research.google.com/drive/1Inww_IHnbZclx8BwDfj4aP4N3cu4Dl9k?usp=sharing). You can also choose to create a new notebook with File > New Notebook.
 
@@ -27,7 +27,7 @@ To mount your Drive use the right method:
 from google.colab import drive
 drive.mount('/content/drive', force_remount=True)
 ```
-An authorization will be asked to connect Colab to Drive.
+An authorization will be asked to connect Colab to Google Drive.
 
 Then declare the path to your .zip containing the pictures and the log file:
 ```python
@@ -42,7 +42,7 @@ To import the .zip into your workspace:
 ```
 
 ## Load pictures paths and labels
-The next step is to load the pictures from the workspace to the python code as a Panda Frame for easier processing.
+The next step is to load the pictures from the workspace as a Panda Frame dataset for easier processing.
 
 The .csv log file generated while taking pictures indicates for each row the path (e.g. the timestamp) for each .jpeg file and its associated label. A function is needed to return the image path from the log file:
 ```python
@@ -79,7 +79,7 @@ print(data.head())
 ```
 
 ## Prepare arrays
-To train the neural network, the pictures and the labels needs to be separated into two numpy arrays.
+To train the neural network, the pictures and the labels need to be separated into two numpy arrays.
 
 ```python
 def loadData(path, data):
@@ -111,7 +111,7 @@ cv2_imshow(img)
 The picture size can vary from the webcam used in the project.
 
 ## Pictures augmenting and process
-What characterize a good model is what type of data is implemented in it for training. In addition to good labelling, the polyvalence of the pictures will help the model to predict a better direction of steering for the robot. For example, an image taken from the webcam be blurred, flipped or zoomed representing every situation in the real life (weather or luminosity changing, slopes...). Training a model with only one type of pictures taken in the same conditions can affect the prediction accuracy.
+What characterize a good model is what type of data is implemented in it for training. In addition to good labelling, the polyvalence of the pictures dataset will help the model to predict a better direction of steering for the robot. For example, an image taken from the webcam be blurred, flipped or zoomed representing every situation in the real life (weather or luminosity changing, slopes...). Training a model with only one type of pictures taken in the same conditions can affect the prediction accuracy.
 
 The first step is to augment each image of the dataset. Each image will be randomly (with a probability of 50%) rotated, scaled, brightened or flipped:
 ```python
@@ -191,7 +191,7 @@ model.add(Convolution2D(48, (5, 5), (2, 2), activation='elu'))
 model.add(Convolution2D(64, (3, 3), activation='elu'))
 model.add(Convolution2D(64, (3, 3), activation='elu'))
 ```
-The number of convolution layers and the parameters depends of the level of detail to be analysed in each image.
+The number of convolution layers and the parameters depends of the level of details to be analysed in each image.
 For each layer:
 - The filters represents the dimensionality of the output space or the convolution channels. They are used to extract features from images in the process of convolution. The first convolution layer as 24 filters and the number is increasing for each layer to get deeper details of an image.
 - The kernel size represents the convolution window. A little kernel size will increase the precision of features analysis.
@@ -237,7 +237,7 @@ To get a prediction from a trained model, you can use the method model.predict()
 steering = int(model.predict(img))
 ```
 
-The model can also be saved to use it in the robot:
+The model can be saved to use it in the robot:
 ```python
 model.save("model.h5")
 ```
